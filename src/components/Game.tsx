@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Board from './Board'
 import Dice from './Dice'
+import useSound from '@/hooks/useSound'
 
 interface Score {
   playerX: number
@@ -10,6 +11,7 @@ interface Score {
 }
 
 export default function Game() {
+  const { playDiceRoll, playPlaceMark, playWin, playColumnFull, playClick } = useSound()
   const [boardLeft, setBoardLeft] = useState<(string | null)[][]>(Array(3).fill(null).map(() => Array(3).fill(null)))
   const [boardRight, setBoardRight] = useState<(string | null)[][]>(Array(3).fill(null).map(() => Array(3).fill(null)))
   const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>('X')
@@ -67,6 +69,7 @@ export default function Game() {
   const rollDice = () => {
     if (isRolling || winner) return
     
+    playDiceRoll()
     setIsRolling(true)
     setGameStarted(true)
     
@@ -88,6 +91,7 @@ export default function Game() {
         // Check if column is full
         if (isColumnFull(colIndex, boardSide)) {
           // Column is full - pass turn to next player
+          playColumnFull()
           setAllowedColumn(null)
           setCurrentPlayer(prev => prev === 'X' ? 'O' : 'X')
         } else {
@@ -110,6 +114,7 @@ export default function Game() {
 
     const newBoard = currentBoard.map(r => [...r])
     newBoard[row][col] = currentPlayer
+    playPlaceMark()
 
     if (boardSide === 'left') {
       setBoardLeft(newBoard)
@@ -118,6 +123,7 @@ export default function Game() {
     }
 
     if (checkWinner(newBoard, currentPlayer)) {
+      playWin()
       setWinner(currentPlayer)
       setScore(prev => ({
         ...prev,
@@ -242,7 +248,7 @@ export default function Game() {
             </h2>
             <button
               type="button"
-              onClick={resetGame}
+              onClick={() => { playClick(); resetGame(); }}
               className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               Jogar Novamente
@@ -254,14 +260,14 @@ export default function Game() {
       <div className="flex justify-center gap-3 mt-4">
         <button
           type="button"
-          onClick={resetGame}
+          onClick={() => { playClick(); resetGame(); }}
           className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg transition-colors"
         >
           🔄 Reiniciar
         </button>
         <button
           type="button"
-          onClick={resetScore}
+          onClick={() => { playClick(); resetScore(); }}
           className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
         >
           🗑️ Zerar Placar
