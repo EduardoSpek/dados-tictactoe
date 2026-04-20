@@ -126,16 +126,20 @@ export default function Game() {
       // Can only steal opponent's cells
       if (cellValue !== opponent) return
       
+      // Create deep copy of the board
       const newBoard = currentBoard.map(r => [...r])
       newBoard[row][col] = currentPlayer
+      
       playSteal()
       
+      // Update the correct board state
       if (boardSide === 'left') {
-        setBoardLeft(newBoard)
+        setBoardLeft([...newBoard])
       } else {
-        setBoardRight(newBoard)
+        setBoardRight([...newBoard])
       }
       
+      // Check for winner after state update
       if (checkWinner(newBoard, currentPlayer)) {
         playWin()
         setWinner(currentPlayer)
@@ -281,7 +285,7 @@ export default function Game() {
                 size="lg"
                 isRolling={isRolling}
                 onClick={rollDice}
-                disabled={isRolling || (gameStarted && allowedColumn !== null)}
+                disabled={isRolling || (gameStarted && allowedColumn !== null) || stealMode}
               />
               <div className="text-center">
                 <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{diceValue}</p>
