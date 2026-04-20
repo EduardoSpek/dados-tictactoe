@@ -10,13 +10,17 @@ interface BoardProps {
   playerName: string
   isActive: boolean
   diceStart: number
+  stealMode?: boolean
 }
 
-export default function Board({ board, currentPlayer, allowedColumn, onCellClick, playerName, isActive, diceStart }: BoardProps) {
+export default function Board({ board, currentPlayer, allowedColumn, onCellClick, playerName, isActive, diceStart, stealMode = false }: BoardProps) {
   const getCellClasses = (row: number, col: number, value: string | null) => {
     const actualCol = diceStart === 4 ? col + 3 : col
+    const opponent = currentPlayer === 'X' ? 'O' : 'X'
+    const isOpponentCell = value === opponent
     const isAllowed = allowedColumn === actualCol && value === null
-    const isDisabled = allowedColumn !== null && allowedColumn !== actualCol
+    const isStealable = stealMode && isOpponentCell
+    const isDisabled = !stealMode && allowedColumn !== null && allowedColumn !== actualCol
     
     let baseClasses = `
       w-full aspect-square
@@ -28,9 +32,17 @@ export default function Board({ board, currentPlayer, allowedColumn, onCellClick
     `
     
     if (value === 'X') {
-      baseClasses += ' bg-blue-300 dark:bg-blue-800 border-blue-600 dark:border-blue-400 text-blue-800 dark:text-blue-200 shadow-inner'
+      if (isStealable) {
+        baseClasses += ' bg-red-300 dark:bg-red-800 border-red-600 dark:border-red-400 text-red-800 dark:text-red-200 shadow-inner cursor-pointer hover:bg-red-400 dark:hover:bg-red-700 animate-pulse'
+      } else {
+        baseClasses += ' bg-blue-300 dark:bg-blue-800 border-blue-600 dark:border-blue-400 text-blue-800 dark:text-blue-200 shadow-inner'
+      }
     } else if (value === 'O') {
-      baseClasses += ' bg-green-300 dark:bg-green-800 border-green-600 dark:border-green-400 text-green-800 dark:text-green-200 shadow-inner'
+      if (isStealable) {
+        baseClasses += ' bg-red-300 dark:bg-red-800 border-red-600 dark:border-red-400 text-red-800 dark:text-red-200 shadow-inner cursor-pointer hover:bg-red-400 dark:hover:bg-red-700 animate-pulse'
+      } else {
+        baseClasses += ' bg-green-300 dark:bg-green-800 border-green-600 dark:border-green-400 text-green-800 dark:text-green-200 shadow-inner'
+      }
     } else if (isAllowed && isActive) {
       baseClasses += ' bg-yellow-300 dark:bg-yellow-700 border-yellow-500 dark:border-yellow-400 cursor-pointer hover:bg-yellow-400 dark:hover:bg-yellow-600 shadow-lg animate-pulse'
     } else if (isDisabled || !isActive) {
@@ -60,7 +72,7 @@ export default function Board({ board, currentPlayer, allowedColumn, onCellClick
               key={`${rowIndex}-${colIndex}`}
               type="button"
               onClick={() => onCellClick(rowIndex, colIndex)}
-              disabled={!isActive || cell !== null}
+              disabled={!stealMode && (!isActive || cell !== null)}
               className={getCellClasses(rowIndex, colIndex, cell)}
             >
               {cell}

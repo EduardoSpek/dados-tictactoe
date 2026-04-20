@@ -67,6 +67,18 @@ export default function Game() {
     return false
   }, [])
 
+  // Check if there are opponent cells to steal
+  const hasOpponentCells = useCallback((opponent: string): boolean => {
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (boardLeft[row][col] === opponent || boardRight[row][col] === opponent) {
+          return true
+        }
+      }
+    }
+    return false
+  }, [boardLeft, boardRight])
+
   const rollDice = () => {
     if (isRolling || winner) return
     
@@ -83,7 +95,16 @@ export default function Game() {
       
       if (rolls >= maxRolls) {
         clearInterval(interval)
-        const finalValue = Math.floor(Math.random() * 7) // 0-6 now!
+        const opponent = currentPlayer === 'X' ? 'O' : 'X'
+        
+        // Only allow 0 if there are opponent cells to steal
+        let finalValue: number
+        if (hasOpponentCells(opponent)) {
+          finalValue = Math.floor(Math.random() * 7) // 0-6
+        } else {
+          finalValue = Math.floor(Math.random() * 6) + 1 // 1-6 only
+        }
+        
         setDiceValue(finalValue)
         
         // ZERO = Steal mode!
@@ -117,26 +138,42 @@ export default function Game() {
   const handleCellClick = (boardSide: 'left' | 'right', row: number, col: number) => {
     if (!gameStarted || isRolling || winner) return
     
+    // Get the current board based on side
     const currentBoard = boardSide === 'left' ? boardLeft : boardRight
     const cellValue = currentBoard[row][col]
     
     // Steal mode (dice = 0) - can steal opponent's cell
     if (stealMode) {
       const opponent = currentPlayer === 'X' ? 'O' : 'X'
-      // Can only steal opponent's cells
-      if (cellValue !== opponent) return
       
-      // Create deep copy of the board
-      const newBoard = currentBoard.map(r => [...r])
-      newBoard[row][col] = currentPlayer
+      // Debug logging
+      console.log('Steal mode clicked:', { boardSide, row, col, cellValue, opponent, currentPlayer })
+      
+      // Can only steal opponent's cells
+      if (cellValue !== opponent) {
+        console.log('Cannot steal - not opponent cell')
+        return
+      }
+      
+      // Create new board with stolen cell
+      const newBoard = currentBoard.map((r, rowIndex) => 
+        r.map((cell, colIndex) => {
+          if (rowIndex === row && colIndex === col) {
+            return currentPlayer // Replace with current player's mark
+          }
+          return cell
+        })
+      )
+      
+      console.log('New board after steal:', newBoard)
       
       playSteal()
       
       // Update the correct board state
       if (boardSide === 'left') {
-        setBoardLeft([...newBoard])
+        setBoardLeft(newBoard)
       } else {
-        setBoardRight([...newBoard])
+        setBoardRight(newBoard)
       }
       
       // Check for winner after state update
@@ -148,7 +185,7 @@ export default function Game() {
           [currentPlayer === 'X' ? 'playerX' : 'playerO']: prev[currentPlayer === 'X' ? 'playerX' : 'playerO'] + 1
         }))
       } else {
-        setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X')
+        setCurrentPlayer(prev => prev === 'X' ? 'O' : 'X')
         setStealMode(false)
       }
       return
@@ -253,6 +290,7 @@ export default function Game() {
               playerName="1-3"
               isActive={currentPlayer === 'X' ? leftBoardActive : leftBoardActiveO}
               diceStart={1}
+              stealMode={stealMode}
             />
           </div>
 
@@ -265,6 +303,7 @@ export default function Game() {
               playerName="4-6"
               isActive={currentPlayer === 'X' ? rightBoardActive : rightBoardActiveO}
               diceStart={4}
+              stealMode={stealMode}
             />
           </div>
         </div>
