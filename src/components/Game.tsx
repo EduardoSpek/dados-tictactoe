@@ -11,7 +11,7 @@ interface Score {
 }
 
 export default function Game() {
-  const { playDiceRoll, playPlaceMark, playWin, playColumnFull, playClick } = useSound()
+  const { playDiceRoll, playPlaceMark, playWin, playColumnFull, playClick, playSteal } = useSound()
   const [boardLeft, setBoardLeft] = useState<(string | null)[][]>(Array(3).fill(null).map(() => Array(3).fill(null)))
   const [boardRight, setBoardRight] = useState<(string | null)[][]>(Array(3).fill(null).map(() => Array(3).fill(null)))
   const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>('X')
@@ -22,6 +22,7 @@ export default function Game() {
   const [score, setScore] = useState<Score>({ playerX: 0, playerO: 0 })
   const [gameStarted, setGameStarted] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [stealMode, setStealMode] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -72,6 +73,7 @@ export default function Game() {
     playDiceRoll()
     setIsRolling(true)
     setGameStarted(true)
+    setStealMode(false)
     
     let rolls = 0
     const maxRolls = 15
@@ -81,8 +83,17 @@ export default function Game() {
       
       if (rolls >= maxRolls) {
         clearInterval(interval)
-        const finalValue = Math.floor(Math.random() * 6) + 1
+        const finalValue = Math.floor(Math.random() * 7) // 0-6 now!
         setDiceValue(finalValue)
+        
+        // ZERO = Steal mode!
+        if (finalValue === 0) {
+          playSteal()
+          setStealMode(true)
+          setAllowedColumn(null)
+          setIsRolling(false)
+          return
+        }
         
         const column = finalValue - 1 // 0-5
         const boardSide = column <= 2 ? 'left' : 'right'
@@ -104,13 +115,48 @@ export default function Game() {
   }
 
   const handleCellClick = (boardSide: 'left' | 'right', row: number, col: number) => {
-    if (!gameStarted || isRolling || winner || allowedColumn === null) return
+    if (!gameStarted || isRolling || winner) return
+    
+    const currentBoard = boardSide === 'left' ? boardLeft : boardRight
+    const cellValue = currentBoard[row][col]
+    
+    // Steal mode (dice = 0) - can steal opponent's cell
+    if (stealMode) {
+      const opponent = currentPlayer === 'X' ? 'O' : 'X'
+      // Can only steal opponent's cells
+      if (cellValue !== opponent) return
+      
+      const newBoard = currentBoard.map(r => [...r])
+      newBoard[row][col] = currentPlayer
+      playSteal()
+      
+      if (boardSide === 'left') {
+        setBoardLeft(newBoard)
+      } else {
+        setBoardRight(newBoard)
+      }
+      
+      if (checkWinner(newBoard, currentPlayer)) {
+        playWin()
+        setWinner(currentPlayer)
+        setScore(prev => ({
+          ...prev,
+          [currentPlayer === 'X' ? 'playerX' : 'playerO']: prev[currentPlayer === 'X' ? 'playerX' : 'playerO'] + 1
+        }))
+      } else {
+        setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X')
+        setStealMode(false)
+      }
+      return
+    }
+    
+    // Normal mode - need allowedColumn
+    if (allowedColumn === null) return
     
     const actualCol = boardSide === 'left' ? col : col + 3
     if (actualCol !== allowedColumn) return
-
-    const currentBoard = boardSide === 'left' ? boardLeft : boardRight
-    if (currentBoard[row][col] !== null) return
+    
+    if (cellValue !== null) return
 
     const newBoard = currentBoard.map(r => [...r])
     newBoard[row][col] = currentPlayer
@@ -143,6 +189,7 @@ export default function Game() {
     setAllowedColumn(null)
     setWinner(null)
     setGameStarted(false)
+    setStealMode(false)
   }
 
   const resetScore = () => {
@@ -160,6 +207,7 @@ export default function Game() {
     if (winner) return null
     if (!gameStarted) return 'Clique no dado para começar!'
     if (isRolling) return 'Sorteando...'
+    if (stealMode) return '🔥 MODO ROUBO! Clique em uma casa do adversário para roubá-la!'
     if (allowedColumn !== null) {
       return allowedColumn <= 2 
         ? `Marque na coluna ${allowedColumn + 1} (Tabuleiro Esquerdo)`
@@ -277,10 +325,11 @@ export default function Game() {
       <div className="max-w-xl mx-auto mt-3 p-3 bg-gray-200 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700">
         <h3 className="font-bold text-gray-900 dark:text-white mb-1 text-sm">Como Jogar:</h3>
         <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-0.5">
-          <li>1. Clique no dado para sortear (1-6)</li>
+          <li>1. Clique no dado para sortear (0-6)</li>
           <li>2. Números 1, 2, 3 → tabuleiro esquerdo | 4, 5, 6 → tabuleiro direito</li>
-          <li>3. Se a coluna estiver cheia, a vez passa automaticamente</li>
-          <li>4. Faça 3 em linha para vencer!</li>
+          <li>3. <span className="text-purple-600 dark:text-purple-400 font-semibold">ZERO (0) = MODO ROUBO!</span> Roube uma casa do adversário!</li>
+          <li>4. Se a coluna estiver cheia, a vez passa automaticamente</li>
+          <li>5. Faça 3 em linha para vencer!</li>
         </ul>
       </div>
 

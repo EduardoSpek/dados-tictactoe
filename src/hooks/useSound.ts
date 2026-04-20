@@ -105,12 +105,42 @@ const useSound = () => {
     playTone(600, 0.08, 'sine')
   }, [playTone])
 
+  // Steal sound - dramatic power-up
+  const playSteal = useCallback(() => {
+    try {
+      const ctx = getAudioContext()
+      // Rising dramatic sound
+      const notes = [300, 450, 600, 900]
+      
+      notes.forEach((freq, index) => {
+        setTimeout(() => {
+          const oscillator = ctx.createOscillator()
+          const gainNode = ctx.createGain()
+          oscillator.connect(gainNode)
+          gainNode.connect(ctx.destination)
+          
+          oscillator.frequency.value = freq
+          oscillator.type = 'sawtooth'
+          
+          gainNode.gain.setValueAtTime(0.2, ctx.currentTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
+          
+          oscillator.start(ctx.currentTime)
+          oscillator.stop(ctx.currentTime + 0.3)
+        }, index * 80)
+      })
+    } catch (e) {
+      console.log('Audio not supported')
+    }
+  }, [])
+
   return {
     playDiceRoll,
     playPlaceMark,
     playWin,
     playColumnFull,
-    playClick
+    playClick,
+    playSteal
   }
 }
 

@@ -37,35 +37,42 @@ export default function Dice({ value, size = 'md', isRolling = false, onClick, d
     return positions[position] || ''
   }
 
-  const currentValue = value >= 1 && value <= 6 ? value : 1
+  const currentValue = value >= 0 && value <= 6 ? value : 1
+  const isZero = currentValue === 0
 
   return (
     <div
       onClick={!disabled ? onClick : undefined}
       className={`
         ${sizeClasses[size]}
-        relative bg-white dark:bg-gray-800
-        border-2 border-gray-400 dark:border-gray-600
+        relative 
+        ${isZero ? 'bg-purple-500 dark:bg-purple-600 border-purple-700 dark:border-purple-400' : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600'}
+        border-2 
         rounded-xl shadow-lg
         flex items-center justify-center
         transition-all duration-200
         ${isRolling ? 'animate-spin' : ''}
         ${onClick && !disabled ? 'cursor-pointer hover:shadow-xl hover:scale-105 active:scale-95' : 'cursor-default'}
         ${disabled ? 'opacity-50' : ''}
+        ${isZero ? 'animate-pulse shadow-purple-300 dark:shadow-purple-900' : ''}
       `}
     >
-      {dotPositions[currentValue]?.map((position, index) => (
-        <div
-          key={index}
-          className={`
-            absolute w-2.5 h-2.5
-            bg-red-600 dark:bg-red-500
-            rounded-full
-            ${getPositionClasses(position)}
-            ${size === 'sm' ? 'w-2 h-2' : ''}
-          `}
-        />
-      ))}
+      {isZero ? (
+        <span className="text-white font-bold text-2xl md:text-4xl">0</span>
+      ) : (
+        dotPositions[currentValue]?.map((position, index) => (
+          <div
+            key={index}
+            className={`
+              absolute w-2.5 h-2.5
+              bg-red-600 dark:bg-red-500
+              rounded-full
+              ${getPositionClasses(position)}
+              ${size === 'sm' ? 'w-2 h-2' : ''}
+            `}
+          />
+        ))
+      )}
     </div>
   )
 }
